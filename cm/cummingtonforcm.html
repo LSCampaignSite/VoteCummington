@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vote Sir Cummington</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #1a1300;
+      color: #ffdb9a;
+      min-height: 100vh;
+      box-sizing: border-box;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero {
+      width: 100%;
+      background: url('hero.png') no-repeat center center;
+      background-size: cover;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      height: 440px;
+      box-shadow: inset 0 0 120px #ffac04aa;
+      position: relative;
+      z-index: 2;
+      margin-top: 110px;
+    }
+    .cummington-overlay {
+      height: 340px;
+      max-width: 380px;
+      object-fit: contain;
+      filter: drop-shadow(4px 4px 8px #ffac04cc);
+      user-select: none;
+      margin-left: 52px;
+    }
+    .hero-text {
+      margin-left: 70px;
+      max-width: 500px;
+      color: #ffac04;
+      text-shadow: 0 0 14px #ffa500cc;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      height: 100%;
+    }
+    .hero-text h1 {
+      margin: 0;
+      font-size: 68px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .hero-text p {
+      margin-top: 19px;
+      font-size: 33px;
+      font-style: italic;
+      font-weight: 600;
+    }
+    .nav-buttons {
+      display: flex;
+      flex-direction: row;
+      gap: 32px;
+      justify-content: center;
+      margin: 70px 0 45px 0;
+      z-index: 2;
+      position: relative;
+    }
+    .nav-btn {
+      padding: 27px 60px;
+      font-size: 1.6rem;
+      background-color: #ffac04;
+      color: #331f00;
+      border: none;
+      border-radius: 13px;
+      cursor: pointer;
+      font-weight: 700;
+      box-shadow: 0 5px 0 #b87600;
+      transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+      letter-spacing: 2px;
+    }
+    .nav-btn:hover {
+      background-color: #b87600;
+      color: #fff9db;
+      box-shadow: 0 4px 0 #7c5000;
+    }
+    .hive-container {
+      width: 100vw;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      justify-content: center;
+      z-index: 11;
+      pointer-events: none;
+    }
+    .hive-img {
+      width: 200px;
+      height: auto;
+      pointer-events: none;
+      margin-bottom: -22px;
+      filter: drop-shadow(0 0 32px #00ffeebb) drop-shadow(0 0 10px #0099ff88);
+      z-index: 11;
+    }
+    .drone-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+    footer {
+      display: none;
+    }
+    @media (max-width: 850px) {
+      .hero {
+        flex-direction: column;
+        height: auto;
+        padding-left: 0;
+        gap: 18px;
+        align-items: flex-start;
+      }
+      .cummington-overlay {
+        height: 180px;
+        max-width: 170px;
+        margin-left: 12px;
+      }
+      .hero-text {
+        margin-left: 16px;
+        max-width: 90vw;
+      }
+      .hive-img {
+        width: 110px;
+      }
+      .nav-btn {
+        padding: 17px 15vw;
+        font-size: 1.1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <img src="download.png" alt="Sir Cummington" class="cummington-overlay" />
+    <div class="hero-text">
+      <h1>Vote Sir Cummington</h1>
+      <p>“For the Players”</p>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="nav-btn" onclick="location.href='campaign.html'">Campaign</button>
+    <button class="nav-btn" onclick="location.href='thetruth.html'">The Truth</button>
+    <button class="nav-btn" onclick="location.href='aboutme.html'">About Me</button>
+  </div>
+
+  <canvas class="drone-canvas"></canvas>
+  <div class="hive-container">
+    <img src="hive.png" alt="Hive" class="hive-img" id="hive-img" />
+  </div>
+
+  <script>
+    // ---- DRONE_CONFIG ----
+    const DRONE_COUNT = 8;
+    const DRONE_IMG_SRC = "drone.png";
+    const TRAIL_COLOR = "#93ffff";
+    const DRONE_SIZE = 98; 
+    const DRONE_MIN_SPEED = 1.1;
+    const DRONE_MAX_SPEED = 2.4;
+    const DRONE_MIN_DIST = 170;
+    const DRONE_MAX_DIST = 820; 
+    const RETURN_PAUSE = 80; 
+    const TURN_RATE = 0.02 + Math.random() * 0.01; 
+    // ----
+    const canvas = document.querySelector('.drone-canvas');
+    const ctx = canvas.getContext('2d');
+    let drones = [];
+    let droneImg = new window.Image();
+    droneImg.src = DRONE_IMG_SRC;
+    let hiveImg = document.getElementById('hive-img');
+
+    
+    function getHiveEdgePoints() {
+      const rect = hiveImg.getBoundingClientRect();
+      
+      const points = [];
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height * 0.90;
+      const rx = rect.width * 0.48;
+      const ry = rect.height * 0.18;
+      for (let t = 0; t <= Math.PI; t += Math.PI / 20) {
+        points.push({
+          x: cx + Math.cos(t) * rx,
+          y: cy + Math.sin(t) * ry
+        });
+      }
+      return points;
+    }
+    function getRandomHiveSpawn() {
+      const pts = getHiveEdgePoints();
+      return pts[Math.floor(Math.random() * pts.length)];
+    }
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas, false);
+    resizeCanvas();
+
+    function randomAngle() {
+      
+      return Math.random() * Math.PI * 2;
+    }
+
+    function randomSpeed() {
+      return DRONE_MIN_SPEED + Math.random() * (DRONE_MAX_SPEED - DRONE_MIN_SPEED);
+    }
+
+    function randomTarget() {
+      
+      let margin = 60;
+      let x = margin + Math.random() * (canvas.width - margin * 2);
+      let y = margin + Math.random() * (canvas.height - margin * 2);
+      return {x, y};
+    }
+
+    function spawnDrone() {
+      let spawn = getRandomHiveSpawn();
+      let angle = randomAngle();
+      let speed = randomSpeed();
+      let target = randomTarget();
+      return {
+        state: "out",
+        pos: {x: spawn.x, y: spawn.y},
+        heading: angle,
+        speed: speed,
+        target: target,
+        trail: [{x: spawn.x, y: spawn.y}],
+        restTimer: RETURN_PAUSE,
+        returnSpeed: speed * (1.1 + Math.random() * 0.6),
+        trailWidth: Math.max(3, DRONE_SIZE * 0.11),
+        spawn: spawn
+      };
+    }
+
+    function drawTrail(trail, width) {
+      if (trail.length < 2) return;
+      ctx.save();
+      ctx.globalAlpha = 0.32;
+      ctx.strokeStyle = TRAIL_COLOR;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x, trail[0].y);
+      for (let i = 1; i < trail.length; ++i) {
+        ctx.lineTo(trail[i].x, trail[i].y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawDrone(pos, angle) {
+      ctx.save();
+      ctx.translate(pos.x, pos.y);
+      ctx.rotate(angle + Math.PI); 
+      ctx.drawImage(droneImg, -DRONE_SIZE/2, -DRONE_SIZE/2, DRONE_SIZE, DRONE_SIZE);
+      ctx.restore();
+    }
+
+    function angleDiff(a, b) {
+      let d = a - b;
+      while (d > Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+      return d;
+    }
+
+    function stepDrone(drone) {
+      
+      if (drone.state === "out") {
+        let desired = Math.atan2(drone.target.y - drone.pos.y, drone.target.x - drone.pos.x);
+        let diff = angleDiff(desired, drone.heading);
+        if (Math.random() < 0.035) {
+          drone.heading += (Math.random() - 0.5) * 0.18;
+        }
+        drone.heading += Math.max(Math.min(diff, TURN_RATE), -TURN_RATE);
+        drone.pos.x += Math.cos(drone.heading) * drone.speed;
+        drone.pos.y += Math.sin(drone.heading) * drone.speed;
+        drone.trail.push({x: drone.pos.x, y: drone.pos.y});
+        if (drone.trail.length > 44) drone.trail.shift();
+        if (Math.hypot(drone.pos.x - drone.target.x, drone.pos.y - drone.target.y) < 24) {
+          drone.state = "returning";
+          
+          let spawn = getRandomHiveSpawn();
+          drone.returnTarget = spawn;
+        }
+      } else if (drone.state === "returning") {
+        let desired = Math.atan2(drone.returnTarget.y - drone.pos.y, drone.returnTarget.x - drone.pos.x);
+        let diff = angleDiff(desired, drone.heading);
+        if (Math.random() < 0.05) {
+          drone.heading += (Math.random() - 0.5) * 0.1;
+        }
+        drone.heading += Math.max(Math.min(diff, TURN_RATE * 1.7), -TURN_RATE * 1.7);
+        drone.pos.x += Math.cos(drone.heading) * drone.returnSpeed;
+        drone.pos.y += Math.sin(drone.heading) * drone.returnSpeed;
+        drone.trail.push({x: drone.pos.x, y: drone.pos.y});
+        if (drone.trail.length > 44) drone.trail.shift();
+        if (Math.hypot(drone.pos.x - drone.returnTarget.x, drone.pos.y - drone.returnTarget.y) < 18) {
+          drone.state = "rest";
+          drone.restTimer = RETURN_PAUSE * (0.7 + Math.random()*1.1);
+        }
+      } else if (drone.state === "rest") {
+        drone.restTimer -= 1;
+        if (drone.restTimer <= 0) {
+          
+          let spawn = getRandomHiveSpawn();
+          let angle = randomAngle();
+          let speed = randomSpeed();
+          let target = randomTarget();
+          drone.pos = {x: spawn.x, y: spawn.y};
+          drone.heading = angle;
+          drone.speed = speed;
+          drone.target = target;
+          drone.returnSpeed = speed * (1.1 + Math.random() * 0.6);
+          drone.trail = [{x: spawn.x, y: spawn.y}];
+          drone.state = "out";
+          drone.spawn = spawn;
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const drone of drones) {
+        drawTrail(drone.trail, drone.trailWidth);
+      }
+      for (const drone of drones) {
+        drawDrone(drone.pos, drone.heading);
+        stepDrone(drone);
+      }
+      requestAnimationFrame(animate);
+    }
+
+    function initDrones() {
+      drones = [];
+      for (let i = 0; i < DRONE_COUNT; ++i) {
+        drones.push(spawnDrone());
+      }
+    }
+
+    droneImg.onload = () => {
+      setTimeout(() => {
+        initDrones();
+        animate();
+      }, 400);
+    };
+    window.addEventListener('resize', () => {
+      setTimeout(() => {
+        for (let drone of drones) {
+          
+          if (drone.state === "rest") {
+            let spawn = getRandomHiveSpawn();
+            drone.pos.x = spawn.x;
+            drone.pos.y = spawn.y;
+            drone.trail = [{x: spawn.x, y: spawn.y}];
+            drone.spawn = spawn;
+          }
+        }
+      }, 400);
+    });
+    hiveImg.onload = () => {
+      setTimeout(() => {
+        initDrones();
+      }, 200);
+    };
+  </script>
+</body>
+</html>
